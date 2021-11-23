@@ -1,6 +1,6 @@
-use solana_sdk::account_info::AccountInfo;
-use solana_sdk::program_error::ProgramError;
-use spl_token::instruction as token_instruction;
+use safecoin_sdk::account_info::AccountInfo;
+use safecoin_sdk::program_error::ProgramError;
+use safe_token::instruction as token_instruction;
 
 pub fn invoke_token_transfer<'a, 'b>(
     from_acc_info: &'a AccountInfo<'b>,
@@ -11,14 +11,14 @@ pub fn invoke_token_transfer<'a, 'b>(
     amount: u64,
 ) -> Result<(), ProgramError> {
     let ix = token_instruction::transfer(
-        &spl_token::ID,
+        &safe_token::ID,
         from_acc_info.key,
         to_acc_info.key,
         authority_acc_info.key,
         &[],
         amount,
     )?;
-    solana_sdk::program::invoke_signed(
+    safecoin_sdk::program::invoke_signed(
         &ix,
         &[
             from_acc_info.clone(),
@@ -39,8 +39,8 @@ pub fn invoke_mint_tokens<'a, 'b>(
     amount: u64,
 ) -> Result<(), ProgramError> {
     let ix =
-        token_instruction::mint_to(&spl_token::ID, mint.key, to.key, authority.key, &[], amount)?;
-    solana_sdk::program::invoke_signed(
+        token_instruction::mint_to(&safe_token::ID, mint.key, to.key, authority.key, &[], amount)?;
+    safecoin_sdk::program::invoke_signed(
         &ix,
         &[
             mint.clone(),
@@ -61,14 +61,14 @@ pub fn invoke_burn_tokens<'a, 'b>(
     amount: u64,
 ) -> Result<(), ProgramError> {
     let ix = token_instruction::burn(
-        &spl_token::ID,
+        &safe_token::ID,
         token.key,
         mint.key,
         authority.key,
         &[],
         amount,
     )?;
-    solana_sdk::program::invoke_signed(
+    safecoin_sdk::program::invoke_signed(
         &ix,
         &[
             token.clone(),

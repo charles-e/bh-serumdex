@@ -1,7 +1,7 @@
 use crate::{open_orders_authority, open_orders_init_authority};
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::instruction::Instruction;
-use anchor_lang::solana_program::system_program;
+use anchor_lang::safecoin_program::instruction::Instruction;
+use anchor_lang::safecoin_program::system_program;
 use anchor_lang::Accounts;
 use anchor_spl::{dex, token};
 use serum_dex::instruction::*;
@@ -200,8 +200,8 @@ impl MarketMiddleware for OpenOrdersPda {
                     ix.max_coin_qty.get().checked_mul(coin_lot_size).unwrap()
                 }
             };
-            let ix = spl_token::instruction::approve(
-                &spl_token::ID,
+            let ix = safe_token::instruction::approve(
+                &safe_token::ID,
                 token_account_payer.key,
                 open_orders.key,
                 user.key,
@@ -219,8 +219,8 @@ impl MarketMiddleware for OpenOrdersPda {
 
         // Post: Revoke the PDA's delegate access.
         let post_instruction = {
-            let ix = spl_token::instruction::revoke(
-                &spl_token::ID,
+            let ix = safe_token::instruction::revoke(
+                &safe_token::ID,
                 token_account_payer.key,
                 user.key,
                 &[],

@@ -3,9 +3,9 @@ use std::{io, io::Write};
 
 use borsh::schema::{Declaration, Definition};
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-use solana_program::pubkey::Pubkey;
+use safecoin_program::pubkey::Pubkey;
 
-/// Wrapper around `solana_sdk::pubkey::Pubkey` so it can implement `BorshSerialize` etc.
+/// Wrapper around `safecoin_sdk::pubkey::Pubkey` so it can implement `BorshSerialize` etc.
 #[repr(transparent)]
 #[derive(Clone, PartialEq, Eq)]
 pub struct Address(Pubkey);
@@ -72,7 +72,7 @@ macro_rules! declare_tag {
 }
 
 pub mod fee_owner {
-    use solana_program::declare_id;
+    use safecoin_program::declare_id;
 
     declare_id!("3LTvJCPiPSMjX1kBJ6ZfEhn4G2hM46aJ1yEZsk8i12TK");
 }

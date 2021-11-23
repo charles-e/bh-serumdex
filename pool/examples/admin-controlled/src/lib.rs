@@ -1,13 +1,13 @@
 use std::ops::DerefMut;
 
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-use solana_program::account_info::{next_account_info, AccountInfo};
-use solana_program::entrypoint::ProgramResult;
-use solana_program::program::invoke_signed;
-use solana_program::program_pack::{IsInitialized, Pack};
-use solana_program::pubkey::Pubkey;
-use solana_program::{msg, program_error::ProgramError};
-use spl_token::state::Account as TokenAccount;
+use safecoin_program::account_info::{next_account_info, AccountInfo};
+use safecoin_program::entrypoint::ProgramResult;
+use safecoin_program::program::invoke_signed;
+use safecoin_program::program_pack::{IsInitialized, Pack};
+use safecoin_program::pubkey::Pubkey;
+use safecoin_program::{msg, program_error::ProgramError};
+use safe_token::state::Account as TokenAccount;
 
 use serum_pool::schema::{
     declare_tag, AssetInfo, Basket, PoolState, FEE_RATE_DENOMINATOR, MIN_FEE_RATE,
@@ -234,7 +234,7 @@ impl AdminControlledPool {
                 let vault_account = next_account_info(accounts_iter)?;
                 let delegate_account = next_account_info(accounts_iter)?;
                 let vault_signer_account = next_account_info(accounts_iter)?;
-                let spl_token_program = next_account_info(accounts_iter)?;
+                let safe_token_program = next_account_info(accounts_iter)?;
 
                 let asset = pool_state
                     .assets
@@ -248,15 +248,15 @@ impl AdminControlledPool {
                     msg!("Incorrect vault signer account");
                     return Err(ProgramError::InvalidArgument);
                 }
-                if spl_token_program.key != &spl_token::ID {
+                if safe_token_program.key != &safe_token::ID {
                     msg!("Incorrect spl-token program ID");
                     return Err(ProgramError::InvalidArgument);
                 }
 
                 custom_state.paused = true;
 
-                let instruction = spl_token::instruction::approve(
-                    &spl_token::ID,
+                let instruction = safe_token::instruction::approve(
+                    &safe_token::ID,
                     asset.vault_address.as_ref(),
                     delegate_account.key,
                     pool_state.vault_signer.as_ref(),
@@ -267,7 +267,7 @@ impl AdminControlledPool {
                     vault_account.clone(),
                     delegate_account.clone(),
                     vault_signer_account.clone(),
-                    spl_token_program.clone(),
+                    safe_token_program.clone(),
                 ];
                 invoke_signed(
                     &instruction,
@@ -345,7 +345,7 @@ impl AdminControlledPool {
 }
 
 fn parse_token_account(account_info: &AccountInfo) -> Result<TokenAccount, ProgramError> {
-    if account_info.owner != &spl_token::ID {
+    if account_info.owner != &safe_token::ID {
         msg!("Account not owned by spl-token program");
         return Err(ProgramError::IncorrectProgramId);
     }

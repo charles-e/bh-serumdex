@@ -1,16 +1,16 @@
 use anyhow::{anyhow, Result};
 use rand::rngs::OsRng;
-use solana_client::rpc_client::RpcClient;
-use solana_client::rpc_config::RpcSendTransactionConfig;
-use solana_client::rpc_request::RpcRequest;
-use solana_client::rpc_response::{RpcResult, RpcSimulateTransactionResult};
-use solana_sdk::commitment_config::CommitmentConfig;
-use solana_sdk::instruction::Instruction;
-use solana_sdk::program_pack::Pack as TokenPack;
-use solana_sdk::pubkey::Pubkey;
-use solana_sdk::signature::{Keypair, Signature, Signer};
-use solana_sdk::transaction::Transaction;
-use spl_token::instruction::{self as token_instruction};
+use safecoin_client::rpc_client::RpcClient;
+use safecoin_client::rpc_config::RpcSendTransactionConfig;
+use safecoin_client::rpc_request::RpcRequest;
+use safecoin_client::rpc_response::{RpcResult, RpcSimulateTransactionResult};
+use safecoin_sdk::commitment_config::CommitmentConfig;
+use safecoin_sdk::instruction::Instruction;
+use safecoin_sdk::program_pack::Pack as TokenPack;
+use safecoin_sdk::pubkey::Pubkey;
+use safecoin_sdk::signature::{Keypair, Signature, Signer};
+use safecoin_sdk::transaction::Transaction;
+use safe_token::instruction::{self as token_instruction};
 use std::convert::Into;
 
 pub fn create_account_rent_exempt(
@@ -25,7 +25,7 @@ pub fn create_account_rent_exempt(
 
     let lamports = client.get_minimum_balance_for_rent_exemption(data_size)?;
 
-    let create_account_instr = solana_sdk::system_instruction::create_account(
+    let create_account_instr = safecoin_sdk::system_instruction::create_account(
         &payer.pubkey(),
         &account.pubkey(),
         lamports,
@@ -83,18 +83,18 @@ pub fn create_token_account_instructions(
     owner_pubkey: &Pubkey,
     payer: &Keypair,
 ) -> Result<Vec<Instruction>> {
-    let lamports = client.get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN)?;
+    let lamports = client.get_minimum_balance_for_rent_exemption(safe_token::state::Account::LEN)?;
 
-    let create_account_instr = solana_sdk::system_instruction::create_account(
+    let create_account_instr = safecoin_sdk::system_instruction::create_account(
         &payer.pubkey(),
         &spl_account,
         lamports,
-        spl_token::state::Account::LEN as u64,
-        &spl_token::ID,
+        safe_token::state::Account::LEN as u64,
+        &safe_token::ID,
     );
 
     let init_account_instr = token_instruction::initialize_account(
-        &spl_token::ID,
+        &safe_token::ID,
         &spl_account,
         &mint_pubkey,
         &owner_pubkey,
@@ -125,17 +125,17 @@ pub fn create_and_init_mint(
 ) -> Result<Signature> {
     let signers = vec![payer_keypair, mint_keypair];
 
-    let lamports = client.get_minimum_balance_for_rent_exemption(spl_token::state::Mint::LEN)?;
+    let lamports = client.get_minimum_balance_for_rent_exemption(safe_token::state::Mint::LEN)?;
 
-    let create_mint_account_instruction = solana_sdk::system_instruction::create_account(
+    let create_mint_account_instruction = safecoin_sdk::system_instruction::create_account(
         &payer_keypair.pubkey(),
         &mint_keypair.pubkey(),
         lamports,
-        spl_token::state::Mint::LEN as u64,
-        &spl_token::ID,
+        safe_token::state::Mint::LEN as u64,
+        &safe_token::ID,
     );
     let initialize_mint_instruction = token_instruction::initialize_mint(
-        &spl_token::ID,
+        &safe_token::ID,
         &mint_keypair.pubkey(),
         owner_pubkey,
         None,
@@ -163,27 +163,27 @@ pub fn mint_to_new_account(
 ) -> Result<Keypair> {
     let recip_keypair = Keypair::generate(&mut OsRng);
 
-    let lamports = client.get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN)?;
+    let lamports = client.get_minimum_balance_for_rent_exemption(safe_token::state::Account::LEN)?;
 
     let signers = vec![payer, minting_key, &recip_keypair];
 
-    let create_recip_instr = solana_sdk::system_instruction::create_account(
+    let create_recip_instr = safecoin_sdk::system_instruction::create_account(
         &payer.pubkey(),
         &recip_keypair.pubkey(),
         lamports,
-        spl_token::state::Account::LEN as u64,
-        &spl_token::ID,
+        safe_token::state::Account::LEN as u64,
+        &safe_token::ID,
     );
 
     let init_recip_instr = token_instruction::initialize_account(
-        &spl_token::ID,
+        &safe_token::ID,
         &recip_keypair.pubkey(),
         mint,
         &payer.pubkey(),
     )?;
 
     let mint_tokens_instr = token_instruction::mint_to(
-        &spl_token::ID,
+        &safe_token::ID,
         mint,
         &recip_keypair.pubkey(),
         &minting_key.pubkey(),
@@ -214,7 +214,7 @@ pub fn transfer(
     payer: &Keypair,
 ) -> Result<Signature> {
     let instr = token_instruction::transfer(
-        &spl_token::ID,
+        &safe_token::ID,
         from,
         to,
         &from_authority.pubkey(),

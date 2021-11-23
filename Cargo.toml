@@ -1,14 +1,12 @@
 [workspace]
 members = [
-    "assert-owner",
-    "common",
-    "dex/crank",
-    "dex/permissioned",
-    "pool",
-    "pool/schema",
-    "pool/examples/admin-controlled",
-    "pool/examples/simple",
+  "assert-owner",
+  "common",
+  "dex/crank",
+  "dex/permissioned",
+  "pool",
+  "pool/schema",
+  "pool/examples/admin-controlled",
+  "pool/examples/simple"
 ]
-exclude = [
-    "dex",
-]
+exclude = [ "dex" ]

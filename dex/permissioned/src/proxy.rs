@@ -1,7 +1,7 @@
 use crate::{Context, ErrorCode, MarketMiddleware};
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::program;
-use anchor_lang::solana_program::pubkey::Pubkey;
+use anchor_lang::safecoin_program::program;
+use anchor_lang::safecoin_program::pubkey::Pubkey;
 use anchor_spl::dex;
 use serum_dex::instruction::*;
 
@@ -151,7 +151,7 @@ impl<'a> MarketProxy<'a> {
                     is_writable: acc.is_writable,
                 })
                 .collect();
-            let ix = anchor_lang::solana_program::instruction::Instruction {
+            let ix = anchor_lang::safecoin_program::instruction::Instruction {
                 data: ix_data.to_vec(),
                 accounts: dex_accounts,
                 program_id: dex::ID,

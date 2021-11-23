@@ -5,16 +5,24 @@ description = "Simple serum pool"
 edition = "2018"
 
 [features]
-no-entrypoint = []
-program = []
-default = []
+no-entrypoint = [ ]
+program = [ ]
+default = [ ]
 
 [dependencies]
-solana-program = "1.4.14"
-serum-pool = { version = "0.1.0", path = "../.." }
-spl-token = { version = "3.0.0", features = ["no-entrypoint"] }
 serum-borsh = "0.8.1-serum.1"
+
+  [dependencies.serum-pool]
+  version = "0.1.0"
+  path = "../.."
+
+  [dependencies.safecoin-program]
+  path = "../../../../Safecoin/sdk/program"
+
+  [dependencies.safe-token]
+  features = [ "no-entrypoint" ]
+  path = "../../../../safecoin-program-library/token/program"
 
 [lib]
 name = "serum_pool_examples_admin_controlled"
-crate-type = ["cdylib", "lib"]
+crate-type = [ "cdylib", "lib" ]

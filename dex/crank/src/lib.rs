@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use std::{thread, time};
 
 use anyhow::{format_err, Result};
-use clap::Clap;
+use clap::{Parser};
 use debug_print::debug_println;
 use enumflags2::BitFlags;
 use log::{error, info};
@@ -24,16 +24,16 @@ use safe_transmute::{
 use sloggers::file::FileLoggerBuilder;
 use sloggers::types::Severity;
 use sloggers::Build;
-use solana_client::rpc_client::RpcClient;
-use solana_client::rpc_config::RpcSendTransactionConfig;
-use solana_sdk::commitment_config::CommitmentConfig;
-use solana_sdk::instruction::{AccountMeta, Instruction};
-use solana_sdk::program_pack::Pack;
-use solana_sdk::pubkey::Pubkey;
-use solana_sdk::signature::Signature;
-use solana_sdk::signature::{Keypair, Signer};
-use solana_sdk::transaction::Transaction;
-use spl_token::instruction as token_instruction;
+use safecoin_client::rpc_client::RpcClient;
+use safecoin_client::rpc_config::RpcSendTransactionConfig;
+use safecoin_sdk::commitment_config::CommitmentConfig;
+use safecoin_sdk::instruction::{AccountMeta, Instruction};
+use safecoin_sdk::program_pack::Pack;
+use safecoin_sdk::pubkey::Pubkey;
+use safecoin_sdk::signature::Signature;
+use safecoin_sdk::signature::{Keypair, Signer};
+use safecoin_sdk::transaction::Transaction;
+use safe_token::instruction as token_instruction;
 use warp::Filter;
 
 use serum_common::client::rpc::{
@@ -59,11 +59,11 @@ pub fn with_logging<F: FnOnce()>(_to: &str, fnc: F) {
 }
 
 fn read_keypair_file(s: &str) -> Result<Keypair> {
-    solana_sdk::signature::read_keypair_file(s)
+    safecoin_sdk::signature::read_keypair_file(s)
         .map_err(|_| format_err!("failed to read keypair from {}", s))
 }
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 pub struct Opts {
     #[clap(default_value = "mainnet")]
     pub cluster: Cluster,
@@ -77,7 +77,7 @@ impl Opts {
     }
 }
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 pub enum Command {
     Genesis {
         #[clap(long, short)]
@@ -721,7 +721,7 @@ fn consume_events_once(
         accounts: account_metas,
         data: instruction_data,
     };
-    let random_instruction = solana_sdk::system_instruction::transfer(
+    let random_instruction = safecoin_sdk::system_instruction::transfer(
         &payer.pubkey(),
         &payer.pubkey(),
         rand::random::<u64>() % 10000 + 1,
@@ -1102,8 +1102,8 @@ pub fn place_order(
             AccountMeta::new_readonly(payer.pubkey(), true),
             AccountMeta::new(*state.coin_vault, false),
             AccountMeta::new(*state.pc_vault, false),
-            AccountMeta::new_readonly(spl_token::ID, false),
-            AccountMeta::new_readonly(solana_sdk::sysvar::rent::ID, false),
+            AccountMeta::new_readonly(safe_token::ID, false),
+            AccountMeta::new_readonly(safecoin_sdk::sysvar::rent::ID, false),
         ],
     };
     instructions.push(instruction);
@@ -1143,7 +1143,7 @@ fn settle_funds(
             AccountMeta::new(*coin_wallet, false),
             AccountMeta::new(*pc_wallet, false),
             AccountMeta::new_readonly(*state.vault_signer_key, false),
-            AccountMeta::new_readonly(spl_token::ID, false),
+            AccountMeta::new_readonly(safe_token::ID, false),
         ],
     };
     let (recent_hash, _fee_calc) = client.get_recent_blockhash()?;
@@ -1329,7 +1329,7 @@ fn create_dex_account(
 ) -> Result<(Keypair, Instruction)> {
     let len = unpadded_len + 12;
     let key = Keypair::generate(&mut OsRng);
-    let create_account_instr = solana_sdk::system_instruction::create_account(
+    let create_account_instr = safecoin_sdk::system_instruction::create_account(
         payer,
         &key.pubkey(),
         client.get_minimum_balance_for_rent_exemption(len)?,
@@ -1393,18 +1393,18 @@ fn create_account(
     let spl_account = Keypair::generate(&mut OsRng);
     let signers = vec![payer, &spl_account];
 
-    let lamports = client.get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN)?;
+    let lamports = client.get_minimum_balance_for_rent_exemption(safe_token::state::Account::LEN)?;
 
-    let create_account_instr = solana_sdk::system_instruction::create_account(
+    let create_account_instr = safecoin_sdk::system_instruction::create_account(
         &payer.pubkey(),
         &spl_account.pubkey(),
         lamports,
-        spl_token::state::Account::LEN as u64,
-        &spl_token::ID,
+        safe_token::state::Account::LEN as u64,
+        &safe_token::ID,
     );
 
     let init_account_instr = token_instruction::initialize_account(
-        &spl_token::ID,
+        &safe_token::ID,
         &spl_account.pubkey(),
         &mint_pubkey,
         &owner_pubkey,
@@ -1437,7 +1437,7 @@ fn mint_to_existing_account(
     let signers = vec![payer, minting_key];
 
     let mint_tokens_instr = token_instruction::mint_to(
-        &spl_token::ID,
+        &safe_token::ID,
         mint,
         recipient,
         &minting_key.pubkey(),
@@ -1459,16 +1459,16 @@ fn mint_to_existing_account(
 
 fn initialize_token_account(client: &RpcClient, mint: &Pubkey, owner: &Keypair) -> Result<Keypair> {
     let recip_keypair = Keypair::generate(&mut OsRng);
-    let lamports = client.get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN)?;
-    let create_recip_instr = solana_sdk::system_instruction::create_account(
+    let lamports = client.get_minimum_balance_for_rent_exemption(safe_token::state::Account::LEN)?;
+    let create_recip_instr = safecoin_sdk::system_instruction::create_account(
         &owner.pubkey(),
         &recip_keypair.pubkey(),
         lamports,
-        spl_token::state::Account::LEN as u64,
-        &spl_token::ID,
+        safe_token::state::Account::LEN as u64,
+        &safe_token::ID,
     );
     let init_recip_instr = token_instruction::initialize_account(
-        &spl_token::ID,
+        &safe_token::ID,
         &recip_keypair.pubkey(),
         mint,
         &owner.pubkey(),

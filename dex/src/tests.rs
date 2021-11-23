@@ -5,16 +5,16 @@ use std::num::NonZeroU64;
 use bumpalo::{collections::Vec as BumpVec, vec as bump_vec, Bump};
 use rand::prelude::*;
 use safe_transmute::to_bytes::{transmute_to_bytes, transmute_to_bytes_mut};
-use solana_program::account_info::AccountInfo;
-use solana_program::bpf_loader;
-use solana_program::clock::Epoch;
-use solana_program::program_pack::Pack;
-use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
-use solana_program::system_program;
-use solana_program::sysvar;
-use solana_program::sysvar::Sysvar;
-use spl_token::state::{Account, AccountState, Mint};
+use safecoin_program::account_info::AccountInfo;
+use safecoin_program::bpf_loader;
+use safecoin_program::clock::Epoch;
+use safecoin_program::program_pack::Pack;
+use safecoin_program::pubkey::Pubkey;
+use safecoin_program::rent::Rent;
+use safecoin_program::system_program;
+use safecoin_program::sysvar;
+use safecoin_program::sysvar::Sysvar;
+use safe_token::state::{Account, AccountState, Mint};
 
 use instruction::{initialize_market, MarketInstruction, NewOrderInstructionV3, SelfTradeBehavior};
 use matching::{OrderType, Side};
@@ -118,7 +118,7 @@ fn new_token_mint<'bump, Gen: Rng>(rng: &mut Gen, bump: &'bump Bump) -> AccountI
         true,
         bump.alloc(10_000_000),
         data,
-        &spl_token::ID,
+        &safe_token::ID,
         false,
         Epoch::default(),
     )
@@ -144,15 +144,15 @@ fn new_token_account<'bump, Gen: Rng>(
         true,
         bump.alloc(10_000_000),
         data,
-        &spl_token::ID,
+        &safe_token::ID,
         false,
         Epoch::default(),
     )
 }
 
-fn new_spl_token_program<'bump>(bump: &'bump Bump) -> AccountInfo<'bump> {
+fn new_safe_token_program<'bump>(bump: &'bump Bump) -> AccountInfo<'bump> {
     AccountInfo::new(
-        &spl_token::ID,
+        &safe_token::ID,
         true,
         false,
         bump.alloc(0),
@@ -270,7 +270,7 @@ fn test_new_order() {
     let coin_account =
         new_token_account(&mut rng, accounts.coin_mint.key, owner.key, 10_000, &bump);
     let pc_account = new_token_account(&mut rng, accounts.pc_mint.key, owner.key, 1_000_000, &bump);
-    let spl_token_program = new_spl_token_program(&bump);
+    let safe_token_program = new_safe_token_program(&bump);
 
     let instruction_data = MarketInstruction::NewOrderV3(NewOrderInstructionV3 {
         side: Side::Bid,
@@ -294,7 +294,7 @@ fn test_new_order() {
         owner.clone(),
         accounts.coin_vault.clone(),
         accounts.pc_vault.clone(),
-        spl_token_program.clone(),
+        safe_token_program.clone(),
         accounts.rent_sysvar.clone(),
     ]
     .into_bump_slice();
@@ -323,7 +323,7 @@ fn test_new_order() {
         owner.clone(),
         accounts.coin_vault.clone(),
         accounts.pc_vault.clone(),
-        spl_token_program.clone(),
+        safe_token_program.clone(),
         accounts.rent_sysvar.clone(),
     ]
     .into_bump_slice();

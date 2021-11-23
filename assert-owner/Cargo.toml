@@ -1,4 +1,4 @@
-# Note: This crate must be built using do.sh
+dev-dependencies = { }
 
 [package]
 name = "serum_assert_owner"
@@ -6,11 +6,9 @@ version = "0.1.0"
 repository = "https://github.com/project-serum/serum-dex"
 edition = "2018"
 
-[dependencies]
-solana-program = "1.4.3"
+[dependencies.safecoin-program]
+path = "../../Safecoin/sdk/program"
 
 [lib]
-crate-type = ["cdylib", "lib"]
+crate-type = [ "cdylib", "lib" ]
 name = "serum_assert_owner"
-
-[dev-dependencies]

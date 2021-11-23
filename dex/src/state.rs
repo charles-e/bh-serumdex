@@ -15,11 +15,11 @@ use enumflags2::BitFlags;
 use num_traits::FromPrimitive;
 use safe_transmute::{self, to_bytes::transmute_to_bytes, trivial::TriviallyTransmutable};
 
-use solana_program::{
+use safecoin_program::{
     account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
     rent::Rent, sysvar::Sysvar,
 };
-use spl_token::error::TokenError;
+use safe_token::error::TokenError;
 
 use crate::{
     critbit::Slab,
@@ -1373,21 +1373,21 @@ pub fn gen_vault_signer_key(
 }
 
 #[cfg(not(any(test, feature = "fuzz")))]
-fn invoke_spl_token(
-    instruction: &solana_program::instruction::Instruction,
+fn invoke_safe_token(
+    instruction: &safecoin_program::instruction::Instruction,
     account_infos: &[AccountInfo],
     signers_seeds: &[&[&[u8]]],
-) -> solana_program::entrypoint::ProgramResult {
-    solana_program::program::invoke_signed(instruction, account_infos, signers_seeds)
+) -> safecoin_program::entrypoint::ProgramResult {
+    safecoin_program::program::invoke_signed(instruction, account_infos, signers_seeds)
 }
 
 #[cfg(any(test, feature = "fuzz"))]
-fn invoke_spl_token(
-    instruction: &solana_program::instruction::Instruction,
+fn invoke_safe_token(
+    instruction: &safecoin_program::instruction::Instruction,
     account_infos: &[AccountInfo],
     _signers_seeds: &[&[&[u8]]],
-) -> solana_program::entrypoint::ProgramResult {
-    assert_eq!(instruction.program_id, spl_token::ID);
+) -> safecoin_program::entrypoint::ProgramResult {
+    assert_eq!(instruction.program_id, safe_token::ID);
     let account_infos: Vec<AccountInfo> = instruction
         .accounts
         .iter()
@@ -1399,7 +1399,7 @@ fn invoke_spl_token(
                 .clone()
         })
         .collect();
-    spl_token::processor::Processor::process(
+    safe_token::processor::Processor::process(
         &instruction.program_id,
         &account_infos,
         &instruction.data,
@@ -1412,12 +1412,12 @@ fn send_from_vault<'a, 'b: 'a>(
     native_amount: u64,
     recipient: account_parser::TokenAccount<'a, 'b>,
     vault: account_parser::TokenAccount<'a, 'b>,
-    spl_token_program: account_parser::SplTokenProgram<'a, 'b>,
+    safe_token_program: account_parser::SplTokenProgram<'a, 'b>,
     vault_signer: account_parser::VaultSigner<'a, 'b>,
     vault_signer_seeds: &[&[u8]],
 ) -> DexResult {
-    let deposit_instruction = spl_token::instruction::transfer(
-        &spl_token::ID,
+    let deposit_instruction = safe_token::instruction::transfer(
+        &safe_token::ID,
         vault.inner().key,
         recipient.inner().key,
         &vault_signer.inner().key,
@@ -1428,9 +1428,9 @@ fn send_from_vault<'a, 'b: 'a>(
         vault.inner().clone(),
         recipient.inner().clone(),
         vault_signer.inner().clone(),
-        spl_token_program.inner().clone(),
+        safe_token_program.inner().clone(),
     ];
-    invoke_spl_token(&deposit_instruction, &accounts[..], &[vault_signer_seeds])
+    invoke_safe_token(&deposit_instruction, &accounts[..], &[vault_signer_seeds])
         .map_err(|_| DexErrorCode::TransferFailed)?;
     Ok(())
 }
@@ -1464,14 +1464,14 @@ pub(crate) mod account_parser {
     }
 
     declare_validated_account_wrapper!(SplTokenProgram, |account: &AccountInfo| {
-        check_assert_eq!(*account.key, spl_token::ID)?;
+        check_assert_eq!(*account.key, safe_token::ID)?;
         Ok(())
     });
 
     declare_validated_account_wrapper!(TokenMint, |mint: &AccountInfo| {
-        check_assert_eq!(*mint.owner, spl_token::ID)?;
+        check_assert_eq!(*mint.owner, safe_token::ID)?;
         let data = mint.try_borrow_data()?;
-        check_assert_eq!(data.len(), spl_token::state::Mint::LEN)?;
+        check_assert_eq!(data.len(), safe_token::state::Mint::LEN)?;
 
         let is_initialized = data[0x2d];
         check_assert_eq!(is_initialized, 1u8)?;
@@ -1479,9 +1479,9 @@ pub(crate) mod account_parser {
     });
 
     declare_validated_account_wrapper!(TokenAccount, |account: &AccountInfo| {
-        check_assert_eq!(*account.owner, spl_token::ID)?;
+        check_assert_eq!(*account.owner, safe_token::ID)?;
         let data = account.try_borrow_data()?;
-        check_assert_eq!(data.len(), spl_token::state::Account::LEN)?;
+        check_assert_eq!(data.len(), safe_token::state::Account::LEN)?;
 
         let is_initialized = data[0x6c];
         check_assert_eq!(is_initialized, 1u8)?;
@@ -1726,7 +1726,7 @@ pub(crate) mod account_parser {
         pub pc_wallet: PcWallet<'a, 'b>,
         pub coin_vault: CoinVault<'a, 'b>,
         pub pc_vault: PcVault<'a, 'b>,
-        pub spl_token_program: SplTokenProgram<'a, 'b>,
+        pub safe_token_program: SplTokenProgram<'a, 'b>,
         pub fee_tier: FeeTier,
     }
     impl<'a, 'b: 'a> SendTakeArgs<'a, 'b> {
@@ -1753,7 +1753,7 @@ pub(crate) mod account_parser {
                 ref signer_acc,
                 ref coin_vault_acc,
                 ref pc_vault_acc,
-                ref spl_token_program_acc,
+                ref safe_token_program_acc,
             ]: &'a [AccountInfo<'b>; MIN_ACCOUNTS] = fixed_accounts;
             let srm_or_msrm_account = match fee_discount_account {
                 &[] => None,
@@ -1776,7 +1776,7 @@ pub(crate) mod account_parser {
             let coin_vault = CoinVault::from_account(coin_vault_acc, &market)?;
             let pc_vault = PcVault::from_account(pc_vault_acc, &market)?;
 
-            let spl_token_program = SplTokenProgram::new(spl_token_program_acc)?;
+            let safe_token_program = SplTokenProgram::new(safe_token_program_acc)?;
 
             let mut bids = market.load_bids_mut(bids_acc).or(check_unreachable!())?;
             let mut asks = market.load_asks_mut(asks_acc).or(check_unreachable!())?;
@@ -1798,7 +1798,7 @@ pub(crate) mod account_parser {
                 coin_vault,
                 pc_vault,
                 order_book_state,
-                spl_token_program,
+                safe_token_program,
             };
             f(args)
         }
@@ -1815,7 +1815,7 @@ pub(crate) mod account_parser {
         pub payer: TokenAccount<'a, 'b>,
         pub coin_vault: CoinVault<'a, 'b>,
         pub pc_vault: PcVault<'a, 'b>,
-        pub spl_token_program: SplTokenProgram<'a, 'b>,
+        pub safe_token_program: SplTokenProgram<'a, 'b>,
         pub fee_tier: FeeTier,
     }
     impl<'a, 'b: 'a> NewOrderV3Args<'a, 'b> {
@@ -1846,7 +1846,7 @@ pub(crate) mod account_parser {
                 ref owner_acc,
                 ref coin_vault_acc,
                 ref pc_vault_acc,
-                ref spl_token_program_acc,
+                ref safe_token_program_acc,
                 ref rent_sysvar_acc,
             ]: &'a [AccountInfo<'b>; MIN_ACCOUNTS] = fixed_accounts;
             let srm_or_msrm_account = match fee_discount_account {
@@ -1878,7 +1878,7 @@ pub(crate) mod account_parser {
             let coin_vault = CoinVault::from_account(coin_vault_acc, &market)?;
             let pc_vault = PcVault::from_account(pc_vault_acc, &market)?;
             market.check_enabled()?;
-            let spl_token_program = SplTokenProgram::new(spl_token_program_acc)?;
+            let safe_token_program = SplTokenProgram::new(safe_token_program_acc)?;
 
             let mut bids = market.load_bids_mut(bids_acc).or(check_unreachable!())?;
             let mut asks = market.load_asks_mut(asks_acc).or(check_unreachable!())?;
@@ -1908,7 +1908,7 @@ pub(crate) mod account_parser {
                 payer,
                 coin_vault,
                 pc_vault,
-                spl_token_program,
+                safe_token_program,
                 fee_tier,
             };
             f(args)
@@ -2120,7 +2120,7 @@ pub(crate) mod account_parser {
         pub coin_wallet: CoinWallet<'a, 'b>,
         pub pc_wallet: PcWallet<'a, 'b>,
         pub vault_signer: VaultSigner<'a, 'b>,
-        pub spl_token_program: SplTokenProgram<'a, 'b>,
+        pub safe_token_program: SplTokenProgram<'a, 'b>,
         pub referrer: Option<PcWallet<'a, 'b>>,
     }
     impl<'a, 'b: 'a> SettleFundsArgs<'a, 'b> {
@@ -2140,9 +2140,9 @@ pub(crate) mod account_parser {
                 ref coin_wallet_acc,
                 ref pc_wallet_acc,
                 ref vault_signer_acc,
-                ref spl_token_program_acc,
+                ref safe_token_program_acc,
             ], remaining_accounts) = array_refs![accounts, 9; ..;];
-            let spl_token_program = SplTokenProgram::new(spl_token_program_acc)?;
+            let safe_token_program = SplTokenProgram::new(safe_token_program_acc)?;
             let market = Market::load(market_acc, program_id, true)?;
             let owner = SignerAccount::new(owner_acc).or(check_unreachable!())?;
 
@@ -2180,7 +2180,7 @@ pub(crate) mod account_parser {
                 coin_wallet,
                 pc_wallet,
                 vault_signer,
-                spl_token_program,
+                safe_token_program,
                 referrer,
             };
             f(args)
@@ -2215,7 +2215,7 @@ pub(crate) mod account_parser {
         pub pc_vault: PcVault<'a, 'b>,
         pub fee_receiver: PcWallet<'a, 'b>,
         pub vault_signer: VaultSigner<'a, 'b>,
-        pub spl_token_program: SplTokenProgram<'a, 'b>,
+        pub safe_token_program: SplTokenProgram<'a, 'b>,
         pub authorization: SigningFeeSweeper<'a, 'b>,
     }
     impl<'a, 'b: 'a> SweepFeesArgs<'a, 'b> {
@@ -2232,14 +2232,14 @@ pub(crate) mod account_parser {
                 ref sweep_authority_acc,
                 ref pc_wallet_acc,
                 ref vault_signer_acc,
-                ref spl_token_program
+                ref safe_token_program
             ] = array_ref![accounts, 0, 6];
 
             let market = Market::load(market_acc, program_id, false)?;
             let pc_vault = PcVault::from_account(pc_vault_acc, &market)?;
             let fee_receiver = PcWallet::from_account(pc_wallet_acc, &market)?;
             let vault_signer = VaultSigner::new(vault_signer_acc, &market, program_id)?;
-            let spl_token_program = SplTokenProgram::new(spl_token_program)?;
+            let safe_token_program = SplTokenProgram::new(safe_token_program)?;
             let authorization = SigningFeeSweeper::new(sweep_authority_acc)?;
 
             let args = SweepFeesArgs {
@@ -2247,7 +2247,7 @@ pub(crate) mod account_parser {
                 pc_vault,
                 fee_receiver,
                 vault_signer,
-                spl_token_program,
+                safe_token_program,
                 authorization,
             };
             f(args)
@@ -2292,13 +2292,13 @@ pub(crate) mod account_parser {
                 return Err(DexErrorCode::TooManyOpenOrders.into());
             }
             if open_orders.native_coin_total != 0 {
-                solana_program::msg!(
+                safecoin_program::msg!(
                     "Base currency total must be zero to close the open orders account"
                 );
                 return Err(DexErrorCode::TooManyOpenOrders.into());
             }
             if open_orders.native_pc_total != 0 {
-                solana_program::msg!(
+                safecoin_program::msg!(
                     "Quote currency total must be zero to close the open orders account"
                 );
                 return Err(DexErrorCode::TooManyOpenOrders.into());
@@ -2562,7 +2562,7 @@ impl State {
         let (bids_removed, asks_removed) =
             order_book_state.remove_all(open_orders_addr_bytes, limit)?;
 
-        solana_program::msg!(
+        safecoin_program::msg!(
             "Pruned {:?} bids and {:?} asks",
             bids_removed.len(),
             asks_removed.len()
@@ -2630,7 +2630,7 @@ impl State {
             coin_wallet,
             pc_wallet,
             vault_signer,
-            spl_token_program,
+            safe_token_program,
             referrer,
         } = args;
 
@@ -2678,7 +2678,7 @@ impl State {
                 token_amount,
                 wallet_account,
                 vault,
-                spl_token_program,
+                safe_token_program,
                 vault_signer,
                 &vault_signer_seeds,
             )?;
@@ -2690,7 +2690,7 @@ impl State {
                     open_orders.referrer_rebates_accrued,
                     referrer_pc_wallet.token_account(),
                     pc_vault.token_account(),
-                    spl_token_program,
+                    safe_token_program,
                     vault_signer,
                     &vault_signer_seeds,
                 )?;
@@ -2889,7 +2889,7 @@ impl State {
             owner,
             coin_vault,
             pc_vault,
-            spl_token_program,
+            safe_token_program,
             fee_tier,
         } = args;
 
@@ -3011,15 +3011,15 @@ impl State {
         // Drop the open orders account in the event that it is the owner
         // of itself, which may happen if the account is a PDA.
         //
-        // `invoke_spl_token` will try to borrow the account info refcell,
+        // `invoke_safe_token` will try to borrow the account info refcell,
         // which would cause an error (as there would be two borrows while
         // one of them is mutable).
         drop(open_orders);
 
         if deposit_amount != 0 {
             let balance_before = deposit_vault.balance()?;
-            let deposit_instruction = spl_token::instruction::transfer(
-                &spl_token::ID,
+            let deposit_instruction = safe_token::instruction::transfer(
+                &safe_token::ID,
                 payer.inner().key,
                 deposit_vault.inner().key,
                 owner.inner().key,
@@ -3027,13 +3027,13 @@ impl State {
                 deposit_amount,
             )
             .unwrap();
-            invoke_spl_token(
+            invoke_safe_token(
                 &deposit_instruction,
                 &[
                     payer.inner().clone(),
                     deposit_vault.inner().clone(),
                     owner.inner().clone(),
-                    spl_token_program.inner().clone(),
+                    safe_token_program.inner().clone(),
                 ],
                 &[],
             )
@@ -3068,7 +3068,7 @@ impl State {
             pc_vault,
             fee_receiver,
             vault_signer,
-            spl_token_program,
+            safe_token_program,
             authorization: _,
         } = args;
         let token_amount = market.pc_fees_accrued;
@@ -3081,7 +3081,7 @@ impl State {
             token_amount,
             fee_receiver.token_account(),
             pc_vault.token_account(),
-            spl_token_program,
+            safe_token_program,
             vault_signer,
             &vault_signer_seeds,
         )

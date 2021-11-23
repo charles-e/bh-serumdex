@@ -17,7 +17,7 @@ limitations under the License.
 #![allow(unused)]
 //! Instruction types
 
-use solana_sdk::{
+use safecoin_sdk::{
     instruction::{AccountMeta, Instruction},
     program_error::ProgramError,
     pubkey::Pubkey,

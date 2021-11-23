@@ -3,19 +3,19 @@ use std::mem::size_of;
 
 use bumpalo::Bump;
 use safe_transmute::to_bytes::{transmute_to_bytes, transmute_to_bytes_mut};
-use solana_program::account_info::AccountInfo;
-use solana_program::bpf_loader;
-use solana_program::clock::Epoch;
-use solana_program::entrypoint::ProgramResult;
-use solana_program::instruction::Instruction;
-use solana_program::program_pack::Pack;
-use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
-use solana_program::system_program;
-use solana_program::sysvar;
-use solana_program::sysvar::Sysvar;
-use spl_token::state::Account as SplAccount;
-use spl_token::state::Mint;
+use safecoin_program::account_info::AccountInfo;
+use safecoin_program::bpf_loader;
+use safecoin_program::clock::Epoch;
+use safecoin_program::entrypoint::ProgramResult;
+use safecoin_program::instruction::Instruction;
+use safecoin_program::program_pack::Pack;
+use safecoin_program::pubkey::Pubkey;
+use safecoin_program::rent::Rent;
+use safecoin_program::system_program;
+use safecoin_program::sysvar;
+use safecoin_program::sysvar::Sysvar;
+use safe_token::state::Account as SplAccount;
+use safe_token::state::Mint;
 
 use serum_dex::error::DexResult;
 use serum_dex::instruction::{fee_sweeper, initialize_market};
@@ -100,7 +100,7 @@ pub fn new_token_mint(bump: &Bump, rent: Rent) -> AccountInfo {
         true,
         bump.alloc(rent.minimum_balance(data.len())),
         data,
-        &spl_token::ID,
+        &safe_token::ID,
         false,
         Epoch::default(),
     )
@@ -115,7 +115,7 @@ pub fn new_token_account<'bump, 'a, 'b>(
 ) -> AccountInfo<'bump> {
     let data = bump.alloc_slice_fill_copy(SplAccount::LEN, 0u8);
     let mut account = SplAccount::default();
-    account.state = spl_token::state::AccountState::Initialized;
+    account.state = safe_token::state::AccountState::Initialized;
     account.mint = *mint_pubkey;
     account.owner = *owner_pubkey;
     account.amount = balance;
@@ -126,15 +126,15 @@ pub fn new_token_account<'bump, 'a, 'b>(
         true,
         bump.alloc(rent.minimum_balance(data.len())),
         data,
-        &spl_token::ID,
+        &safe_token::ID,
         false,
         Epoch::default(),
     )
 }
 
-pub fn new_spl_token_program(bump: &Bump) -> AccountInfo {
+pub fn new_safe_token_program(bump: &Bump) -> AccountInfo {
     AccountInfo::new(
-        &spl_token::ID,
+        &safe_token::ID,
         false,
         false,
         bump.alloc(0),
@@ -197,7 +197,7 @@ pub struct MarketAccounts<'bump> {
     pub coin_mint: AccountInfo<'bump>,
     pub pc_mint: AccountInfo<'bump>,
     pub vault_signer: AccountInfo<'bump>,
-    pub spl_token_program: AccountInfo<'bump>,
+    pub safe_token_program: AccountInfo<'bump>,
     pub rent_sysvar: AccountInfo<'bump>,
     pub sweep_authority: AccountInfo<'bump>,
     pub fee_receiver: AccountInfo<'bump>,
@@ -253,7 +253,7 @@ pub fn setup_market(bump: &Bump, is_permissioned: bool) -> MarketAccounts {
         ),
     };
 
-    let spl_token_program = new_spl_token_program(bump);
+    let safe_token_program = new_safe_token_program(bump);
 
     let coin_lot_size = COIN_LOT_SIZE;
     let pc_lot_size = PC_LOT_SIZE;
@@ -310,7 +310,7 @@ pub fn setup_market(bump: &Bump, is_permissioned: bool) -> MarketAccounts {
         coin_mint,
         pc_mint,
         vault_signer,
-        spl_token_program,
+        safe_token_program,
         rent_sysvar,
         fee_receiver,
         sweep_authority,
@@ -361,7 +361,7 @@ impl<'bump> MarketAccounts<'bump> {
 }
 
 pub fn get_token_account_balance(account: &AccountInfo) -> u64 {
-    assert_eq!(account.owner, &spl_token::ID);
+    assert_eq!(account.owner, &safe_token::ID);
     let data = account.try_borrow_mut_data().unwrap();
     let unpacked = SplAccount::unpack(&data).unwrap();
     return unpacked.amount;
@@ -369,7 +369,7 @@ pub fn get_token_account_balance(account: &AccountInfo) -> u64 {
 
 pub struct NoSolLoggingStubs;
 
-impl solana_program::program_stubs::SyscallStubs for NoSolLoggingStubs {
+impl safecoin_program::program_stubs::SyscallStubs for NoSolLoggingStubs {
     fn sol_log(&self, _message: &str) {}
     fn sol_invoke_signed(
         &self,

@@ -3,7 +3,7 @@ use crate::error::DexError;
 use crate::matching::{OrderType, Side};
 use bytemuck::cast;
 use serde::{Deserialize, Serialize};
-use solana_program::{
+use safecoin_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     sysvar::rent,
@@ -20,22 +20,22 @@ use proptest::prelude::*;
 use proptest_derive::Arbitrary;
 
 pub mod srm_token {
-    use solana_program::declare_id;
+    use safecoin_program::declare_id;
     declare_id!("SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt");
 }
 
 pub mod msrm_token {
-    use solana_program::declare_id;
+    use safecoin_program::declare_id;
     declare_id!("MSRMcoVyrFxnSgo5uXwone5SKcGhT1KEJMFEkMEWf9L");
 }
 
 pub mod disable_authority {
-    use solana_program::declare_id;
+    use safecoin_program::declare_id;
     declare_id!("5ZVJgwWxMsqXxRMYHXqMwH2hd4myX5Ef4Au2iUsuNQ7V");
 }
 
 pub mod fee_sweeper {
-    use solana_program::declare_id;
+    use safecoin_program::declare_id;
     declare_id!("DeqYsmBd9BnrbgUwQjVH4sQWK71dEgE6eoZFw3Rp4ftE");
 }
 
@@ -597,7 +597,7 @@ pub fn initialize_market(
     pc_lot_size: u64,
     vault_signer_nonce: u64,
     pc_dust_threshold: u64,
-) -> Result<solana_program::instruction::Instruction, DexError> {
+) -> Result<safecoin_program::instruction::Instruction, DexError> {
     let data = MarketInstruction::InitializeMarket(InitializeMarketInstruction {
         coin_lot_size,
         pc_lot_size,
@@ -620,7 +620,7 @@ pub fn initialize_market(
     let coin_mint = AccountMeta::new_readonly(*coin_mint_pk, false);
     let pc_mint = AccountMeta::new_readonly(*pc_mint_pk, false);
 
-    let rent_sysvar = AccountMeta::new_readonly(solana_program::sysvar::rent::ID, false);
+    let rent_sysvar = AccountMeta::new_readonly(safecoin_program::sysvar::rent::ID, false);
 
     let mut accounts = vec![
         market_account,
@@ -667,7 +667,7 @@ pub fn new_order(
     open_orders_account_owner: &Pubkey,
     coin_vault: &Pubkey,
     pc_vault: &Pubkey,
-    spl_token_program_id: &Pubkey,
+    safe_token_program_id: &Pubkey,
     rent_sysvar_id: &Pubkey,
     srm_account_referral: Option<&Pubkey>,
     program_id: &Pubkey,
@@ -702,7 +702,7 @@ pub fn new_order(
         AccountMeta::new_readonly(*open_orders_account_owner, true),
         AccountMeta::new(*coin_vault, false),
         AccountMeta::new(*pc_vault, false),
-        AccountMeta::new_readonly(*spl_token_program_id, false),
+        AccountMeta::new_readonly(*safe_token_program_id, false),
         AccountMeta::new_readonly(*rent_sysvar_id, false),
     ];
     if let Some(key) = srm_account_referral {
@@ -825,7 +825,7 @@ pub fn cancel_order(
 pub fn settle_funds(
     program_id: &Pubkey,
     market: &Pubkey,
-    spl_token_program_id: &Pubkey,
+    safe_token_program_id: &Pubkey,
     open_orders_account: &Pubkey,
     open_orders_account_owner: &Pubkey,
     coin_vault: &Pubkey,
@@ -845,7 +845,7 @@ pub fn settle_funds(
         AccountMeta::new(*coin_wallet, false),
         AccountMeta::new(*pc_wallet, false),
         AccountMeta::new_readonly(*vault_signer, false),
-        AccountMeta::new_readonly(*spl_token_program_id, false),
+        AccountMeta::new_readonly(*safe_token_program_id, false),
     ];
     if let Some(key) = referrer_pc_wallet {
         accounts.push(AccountMeta::new(*key, false))
@@ -907,7 +907,7 @@ pub fn sweep_fees(
     fee_sweeping_authority: &Pubkey,
     fee_receivable_account: &Pubkey,
     vault_signer: &Pubkey,
-    spl_token_program_id: &Pubkey,
+    safe_token_program_id: &Pubkey,
 ) -> Result<Instruction, DexError> {
     let data = MarketInstruction::SweepFees.pack();
     let accounts: Vec<AccountMeta> = vec![
@@ -916,7 +916,7 @@ pub fn sweep_fees(
         AccountMeta::new_readonly(*fee_sweeping_authority, true),
         AccountMeta::new(*fee_receivable_account, false),
         AccountMeta::new_readonly(*vault_signer, false),
-        AccountMeta::new_readonly(*spl_token_program_id, false),
+        AccountMeta::new_readonly(*safe_token_program_id, false),
     ];
     Ok(Instruction {
         program_id: *program_id,

@@ -4,15 +4,15 @@ use crate::next_account_infos;
 use serum_pool_schema::{
     Address, Basket, PoolRequestInner, PoolState, FEE_RATE_DENOMINATOR, MIN_FEE_RATE,
 };
-use solana_program;
-use solana_program::account_info::next_account_info;
-use solana_program::instruction::{AccountMeta, Instruction};
-use solana_program::program;
-use solana_program::program_option::COption;
-use solana_program::program_pack::Pack;
-use solana_program::sysvar::{rent, Sysvar};
-use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
-use spl_token::state::{Account as TokenAccount, Mint};
+use safecoin_program;
+use safecoin_program::account_info::next_account_info;
+use safecoin_program::instruction::{AccountMeta, Instruction};
+use safecoin_program::program;
+use safecoin_program::program_option::COption;
+use safecoin_program::program_pack::Pack;
+use safecoin_program::sysvar::{rent, Sysvar};
+use safecoin_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};
+use safe_token::state::{Account as TokenAccount, Mint};
 use std::cmp::{max, min};
 
 pub struct PoolContext<'a, 'b> {
@@ -41,7 +41,7 @@ pub struct PoolContext<'a, 'b> {
     pub fee_accounts: Option<FeeAccounts<'a, 'b>>,
 
     /// Present for `Execute` requests.
-    pub spl_token_program: Option<&'a AccountInfo<'b>>,
+    pub safe_token_program: Option<&'a AccountInfo<'b>>,
 
     /// Accounts from `PoolState::account_params`. Present for `GetBasket` and `Transact` requests.
     pub account_params: Option<&'a [AccountInfo<'b>]>,
@@ -90,7 +90,7 @@ impl<'a, 'b> PoolContext<'a, 'b> {
             retbuf: None,
             user_accounts: None,
             fee_accounts: None,
-            spl_token_program: None,
+            safe_token_program: None,
             account_params: None,
             custom_accounts: &[],
         };
@@ -138,7 +138,7 @@ impl<'a, 'b> PoolContext<'a, 'b> {
                     initializer_fee_account,
                     referrer_fee_account,
                 )?);
-                context.spl_token_program = Some(next_account_info(accounts_iter)?);
+                context.safe_token_program = Some(next_account_info(accounts_iter)?);
                 context.account_params = Some(next_account_infos(
                     accounts_iter,
                     state.account_params.len(),
@@ -166,8 +166,8 @@ impl<'a, 'b> PoolContext<'a, 'b> {
             }
         }
 
-        if let Some(spl_token_program) = context.spl_token_program {
-            if spl_token_program.key != &spl_token::ID {
+        if let Some(safe_token_program) = context.safe_token_program {
+            if safe_token_program.key != &safe_token::ID {
                 msg!("Incorrect spl-token program ID");
                 return Err(ProgramError::InvalidArgument);
             }
@@ -425,8 +425,8 @@ impl<'a, 'b> PoolContext<'a, 'b> {
             .as_ref()
             .ok_or(ProgramError::InvalidArgument)?;
         let pool_vault_accounts = self.pool_vault_accounts;
-        let spl_token_program = self
-            .spl_token_program
+        let safe_token_program = self
+            .safe_token_program
             .ok_or(ProgramError::InvalidArgument)?;
 
         let zipped_iter = basket
@@ -441,8 +441,8 @@ impl<'a, 'b> PoolContext<'a, 'b> {
             let authority_pubkey = user_accounts.authority.key;
             let signer_pubkeys = &[];
 
-            let instruction = spl_token::instruction::transfer(
-                &spl_token::ID,
+            let instruction = safe_token::instruction::transfer(
+                &safe_token::ID,
                 source_pubkey,
                 destination_pubkey,
                 authority_pubkey,
@@ -456,7 +456,7 @@ impl<'a, 'b> PoolContext<'a, 'b> {
                 user_asset_account.clone(),
                 pool_vault_account.clone(),
                 user_accounts.authority.clone(),
-                spl_token_program.clone(),
+                safe_token_program.clone(),
             ];
 
             program::invoke(&instruction, account_infos)?;
@@ -481,8 +481,8 @@ impl<'a, 'b> PoolContext<'a, 'b> {
             .fee_accounts
             .as_ref()
             .ok_or(ProgramError::InvalidArgument)?;
-        let spl_token_program = self
-            .spl_token_program
+        let safe_token_program = self
+            .safe_token_program
             .ok_or(ProgramError::InvalidArgument)?;
 
         for (account, quantity) in &[
@@ -498,8 +498,8 @@ impl<'a, 'b> PoolContext<'a, 'b> {
                 let account_pubkey = account.key;
                 let owner_pubkey = self.pool_authority.key;
                 let signer_pubkeys = &[];
-                let instruction = spl_token::instruction::mint_to(
-                    &spl_token::ID,
+                let instruction = safe_token::instruction::mint_to(
+                    &safe_token::ID,
                     mint_pubkey,
                     account_pubkey,
                     owner_pubkey,
@@ -510,7 +510,7 @@ impl<'a, 'b> PoolContext<'a, 'b> {
                     account.clone(),
                     self.pool_token_mint.clone(),
                     self.pool_authority.clone(),
-                    spl_token_program.clone(),
+                    safe_token_program.clone(),
                 ];
                 program::invoke_signed(
                     &instruction,
@@ -537,8 +537,8 @@ impl<'a, 'b> PoolContext<'a, 'b> {
             .fee_accounts
             .as_ref()
             .ok_or(ProgramError::InvalidArgument)?;
-        let spl_token_program = self
-            .spl_token_program
+        let safe_token_program = self
+            .safe_token_program
             .ok_or(ProgramError::InvalidArgument)?;
 
         for (account, quantity) in &[
@@ -554,8 +554,8 @@ impl<'a, 'b> PoolContext<'a, 'b> {
                 let authority_pubkey = user_accounts.authority.key;
                 let signer_pubkeys = &[];
 
-                let instruction = spl_token::instruction::transfer(
-                    &spl_token::ID,
+                let instruction = safe_token::instruction::transfer(
+                    &safe_token::ID,
                     source_pubkey,
                     destination_pubkey,
                     authority_pubkey,
@@ -567,7 +567,7 @@ impl<'a, 'b> PoolContext<'a, 'b> {
                     user_accounts.pool_token_account.clone(),
                     account.clone(),
                     user_accounts.authority.clone(),
-                    spl_token_program.clone(),
+                    safe_token_program.clone(),
                 ];
 
                 program::invoke(&instruction, account_infos)?;
@@ -580,8 +580,8 @@ impl<'a, 'b> PoolContext<'a, 'b> {
             let authority_pubkey = user_accounts.authority.key;
             let signer_pubkeys = &[];
 
-            let instruction = spl_token::instruction::burn(
-                &spl_token::ID,
+            let instruction = safe_token::instruction::burn(
+                &safe_token::ID,
                 account_pubkey,
                 mint_pubkey,
                 authority_pubkey,
@@ -593,7 +593,7 @@ impl<'a, 'b> PoolContext<'a, 'b> {
                 self.pool_token_mint.clone(),
                 user_accounts.pool_token_account.clone(),
                 user_accounts.authority.clone(),
-                spl_token_program.clone(),
+                safe_token_program.clone(),
             ];
 
             program::invoke(&instruction, account_infos)?;
@@ -613,8 +613,8 @@ impl<'a, 'b> PoolContext<'a, 'b> {
             .as_ref()
             .ok_or(ProgramError::InvalidArgument)?;
         let pool_vault_accounts = self.pool_vault_accounts;
-        let spl_token_program = self
-            .spl_token_program
+        let safe_token_program = self
+            .safe_token_program
             .ok_or(ProgramError::InvalidArgument)?;
 
         let zipped_iter = basket
@@ -629,8 +629,8 @@ impl<'a, 'b> PoolContext<'a, 'b> {
             let authority_pubkey = self.pool_authority.key;
             let signer_pubkeys = &[];
 
-            let instruction = spl_token::instruction::transfer(
-                &spl_token::ID,
+            let instruction = safe_token::instruction::transfer(
+                &safe_token::ID,
                 source_pubkey,
                 destination_pubkey,
                 authority_pubkey,
@@ -644,7 +644,7 @@ impl<'a, 'b> PoolContext<'a, 'b> {
                 user_asset_account.clone(),
                 pool_vault_account.clone(),
                 self.pool_authority.clone(),
-                spl_token_program.clone(),
+                safe_token_program.clone(),
             ];
 
             program::invoke_signed(
@@ -667,7 +667,7 @@ fn check_account_address(account: &AccountInfo, address: &Address) -> Result<(),
 }
 
 fn check_mint_minter(account: &AccountInfo, mint_authority: &Pubkey) -> Result<(), ProgramError> {
-    if account.owner != &spl_token::ID {
+    if account.owner != &safe_token::ID {
         msg!("Account not owned by spl-token program");
         return Err(ProgramError::IncorrectProgramId);
     }
@@ -684,7 +684,7 @@ fn check_token_account(
     mint: &Pubkey,
     authority: Option<&Pubkey>,
 ) -> Result<(), ProgramError> {
-    if account.owner != &spl_token::ID {
+    if account.owner != &safe_token::ID {
         msg!("Account not owned by spl-token program");
         return Err(ProgramError::IncorrectProgramId);
     }
