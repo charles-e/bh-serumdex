@@ -19,4 +19,4 @@ anchor-lang = "0.13.2"
 anchor-spl = "0.13.2"
 
   [dependencies.safecoin-program]
-  path = "../../../../../../Safecoin/sdk/program"
+version = "1.7.17"
