@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-anchor-lang =  { path = "../../../anchor/lang" }
-anchor-spl = { path = "../../../anchor/spl" ,features=["dex"] }
+anchor-lang =  { path = "../../../anchor_prev/lang" }
+anchor-spl = { path = "../../../anchor_prev/spl" ,features=["dex"] }
 
   [dependencies.serum_dex]
   path = "../"
