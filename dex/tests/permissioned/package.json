@@ -27,7 +27,7 @@
     "@project-serum/anchor-cli": "^0.18.2",
     "@project-serum/common": "^0.0.1-beta.3",
     "@project-serum/serum": "^0.13.55",
-    "@solana/spl-token": "^0.1.6",
+    "@safecoin/safe-token": "^0.1.7",
     "mocha": "^9.0.3"
   }
 }

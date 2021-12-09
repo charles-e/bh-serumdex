@@ -183,7 +183,7 @@ pub enum PoolRequestInner {
     /// - `[writable]` LQD fee vault
     /// - `[writable]` Initializer fee vault
     /// - `[writable]` Referrer fee vault
-    /// - `[]` spl-token program
+    /// - `[]` safe-token program
     /// - `[]/[writable]` Accounts in `PoolState::account_params`
     Execute(PoolAction),
 }

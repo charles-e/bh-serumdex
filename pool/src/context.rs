@@ -168,7 +168,7 @@ impl<'a, 'b> PoolContext<'a, 'b> {
 
         if let Some(safe_token_program) = context.safe_token_program {
             if safe_token_program.key != &safe_token::ID {
-                msg!("Incorrect spl-token program ID");
+                msg!("Incorrect safe-token program ID");
                 return Err(ProgramError::InvalidArgument);
             }
         }
@@ -668,7 +668,7 @@ fn check_account_address(account: &AccountInfo, address: &Address) -> Result<(),
 
 fn check_mint_minter(account: &AccountInfo, mint_authority: &Pubkey) -> Result<(), ProgramError> {
     if account.owner != &safe_token::ID {
-        msg!("Account not owned by spl-token program");
+        msg!("Account not owned by safe-token program");
         return Err(ProgramError::IncorrectProgramId);
     }
     let mint = Mint::unpack(&account.try_borrow_data()?)?;
@@ -685,7 +685,7 @@ fn check_token_account(
     authority: Option<&Pubkey>,
 ) -> Result<(), ProgramError> {
     if account.owner != &safe_token::ID {
-        msg!("Account not owned by spl-token program");
+        msg!("Account not owned by safe-token program");
         return Err(ProgramError::IncorrectProgramId);
     }
     let token_account = TokenAccount::unpack(&account.try_borrow_data()?)?;
@@ -696,7 +696,7 @@ fn check_token_account(
     if let Some(authority) = authority {
         if &token_account.owner != authority && token_account.delegate != COption::Some(*authority)
         {
-            msg!("Incorrect spl-token account owner");
+            msg!("Incorrect safe-token account owner");
             return Err(ProgramError::InvalidArgument);
         }
     }

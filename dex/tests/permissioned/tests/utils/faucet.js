@@ -2,7 +2,7 @@ const anchor = require("@project-serum/anchor");
 const BN = anchor.BN;
 const { Account, Transaction, SystemProgram } = anchor.web3;
 const serumCmn = require("@project-serum/common");
-const { TOKEN_PROGRAM_ID, Token } = require("@solana/spl-token");
+const { TOKEN_PROGRAM_ID, Token } = require("@safecoin/safe-token");
 
 const DECIMALS = 6;
 

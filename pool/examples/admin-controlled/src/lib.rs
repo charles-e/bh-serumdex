@@ -49,7 +49,7 @@ pub enum AdminInstructionInner {
     /// - `[writable]` Pool vault account for which to delegate access
     /// - `[]` Account to which to delegate
     /// - `[]` Pool vault signer
-    /// - `[]` spl-token program ID
+    /// - `[]` safe-token program ID
     ApproveDelegate { amount: u64 },
     /// Adds a new asset to the pool.
     ///
@@ -249,7 +249,7 @@ impl AdminControlledPool {
                     return Err(ProgramError::InvalidArgument);
                 }
                 if safe_token_program.key != &safe_token::ID {
-                    msg!("Incorrect spl-token program ID");
+                    msg!("Incorrect safe-token program ID");
                     return Err(ProgramError::InvalidArgument);
                 }
 
@@ -346,7 +346,7 @@ impl AdminControlledPool {
 
 fn parse_token_account(account_info: &AccountInfo) -> Result<TokenAccount, ProgramError> {
     if account_info.owner != &safe_token::ID {
-        msg!("Account not owned by spl-token program");
+        msg!("Account not owned by safe-token program");
         return Err(ProgramError::IncorrectProgramId);
     }
     let parsed = TokenAccount::unpack(&account_info.try_borrow_data()?)?;

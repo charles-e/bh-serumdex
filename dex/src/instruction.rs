@@ -326,8 +326,8 @@ pub enum MarketInstruction {
     /// 2. `[writable]` zeroed out event queue
     /// 3. `[writable]` zeroed out bids
     /// 4. `[writable]` zeroed out asks
-    /// 5. `[writable]` spl-token account for the coin currency
-    /// 6. `[writable]` spl-token account for the price currency
+    /// 5. `[writable]` safe-token account for the coin currency
+    /// 6. `[writable]` safe-token account for the price currency
     /// 7. `[]` coin currency Mint
     /// 8. `[]` price currency Mint
     /// 9. `[]` the rent sysvar

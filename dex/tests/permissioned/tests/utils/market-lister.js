@@ -6,7 +6,7 @@ const {
   Transaction,
   SystemProgram,
 } = require("@project-serum/anchor").web3;
-const { TOKEN_PROGRAM_ID } = require("@solana/spl-token");
+const { TOKEN_PROGRAM_ID } = require("@safecoin/safe-token");
 const serum = require("@project-serum/serum");
 const {
   DexInstructions,

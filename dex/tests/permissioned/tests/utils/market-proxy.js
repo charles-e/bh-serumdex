@@ -3,7 +3,7 @@ const {
   PublicKey,
   SYSVAR_RENT_PUBKEY,
   SYSVAR_CLOCK_PUBKEY,
-} = require("@solana/web3.js");
+} = require("@safecoin/web3.js");
 const {
   OpenOrders,
   OpenOrdersPda,
