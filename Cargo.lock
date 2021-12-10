@@ -62,7 +62,7 @@ checksum = "6b2d54853319fd101b8dd81de382bcbf3e03410a64d8928bbee85a3e7dcde483"
 
 [[package]]
 name = "anchor-attribute-access-control"
-version = "0.18.2"
+version = "0.18.0"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -74,7 +74,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-attribute-account"
-version = "0.18.2"
+version = "0.18.0"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -87,7 +87,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-attribute-error"
-version = "0.18.2"
+version = "0.18.0"
 dependencies = [
  "anchor-syn",
  "proc-macro2 1.0.32",
@@ -97,7 +97,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-attribute-event"
-version = "0.18.2"
+version = "0.18.0"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -108,7 +108,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-attribute-interface"
-version = "0.18.2"
+version = "0.18.0"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -120,7 +120,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-attribute-program"
-version = "0.18.2"
+version = "0.18.0"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -131,7 +131,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-attribute-state"
-version = "0.18.2"
+version = "0.18.0"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -142,7 +142,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-derive-accounts"
-version = "0.18.2"
+version = "0.18.0"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -153,7 +153,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-lang"
-version = "0.18.2"
+version = "0.18.0"
 dependencies = [
  "anchor-attribute-access-control",
  "anchor-attribute-account",
@@ -172,9 +172,10 @@ dependencies = [
 
 [[package]]
 name = "anchor-spl"
-version = "0.18.2"
+version = "0.18.0"
 dependencies = [
  "anchor-lang",
+ "lazy_static",
  "safe-associated-token-account",
  "safe-token",
  "safecoin-program",
@@ -183,7 +184,7 @@ dependencies = [
 
 [[package]]
 name = "anchor-syn"
-version = "0.18.2"
+version = "0.18.0"
 dependencies = [
  "anyhow",
  "bs58 0.3.1",
@@ -608,6 +609,7 @@ dependencies = [
 [[package]]
 name = "clap"
 version = "3.0.0-beta.5"
+source = "git+https://github.com/clap-rs/clap?rev=6fae3f1#6fae3f1a070d366acb6694c17b1f93b8c391e605"
 dependencies = [
  "atty",
  "bitflags",
@@ -624,6 +626,7 @@ dependencies = [
 [[package]]
 name = "clap_derive"
 version = "3.0.0-beta.5"
+source = "git+https://github.com/clap-rs/clap?rev=6fae3f1#6fae3f1a070d366acb6694c17b1f93b8c391e605"
 dependencies = [
  "heck",
  "proc-macro-error",

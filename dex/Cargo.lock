@@ -926,6 +926,8 @@ dependencies = [
 [[package]]
 name = "safe-token"
 version = "3.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8a021cb80236e7a71e61dcbbfe0f550c048083273492117ed5b3cf3227bc277"
 dependencies = [
  "arrayref",
  "num-derive",
@@ -944,6 +946,8 @@ checksum = "98a01dab6acf992653be49205bdd549f32f17cb2803e8eacf1560bf97259aae8"
 [[package]]
 name = "safecoin-frozen-abi"
 version = "1.7.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53f8fcd70678519d0c4ada5f3508892bcfcc7c88d07f53243702603dce780f08"
 dependencies = [
  "bs58",
  "bv",
@@ -962,6 +966,8 @@ dependencies = [
 [[package]]
 name = "safecoin-frozen-abi-macro"
 version = "1.7.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b3cf052462ad81dff64f0f3993204ccde13bc389cf63e7b82fb07932d2e23ef0"
 dependencies = [
  "proc-macro2 1.0.32",
  "quote 1.0.10",
@@ -972,6 +978,8 @@ dependencies = [
 [[package]]
 name = "safecoin-logger"
 version = "1.7.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f18b525936c12d66b4a3e3d1088d2a4340211298d8dc523d839969a2eb8f913"
 dependencies = [
  "env_logger",
  "lazy_static",
@@ -981,6 +989,8 @@ dependencies = [
 [[package]]
 name = "safecoin-program"
 version = "1.7.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da45680864906adefe0b9626c882b1b378f1af9ff1920ea82d9f81f9e340ab86"
 dependencies = [
  "bincode",
  "blake3",
@@ -1015,6 +1025,8 @@ dependencies = [
 [[package]]
 name = "safecoin-sdk-macro"
 version = "1.7.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e416bf5568377831c083e6da462b3f52959f4801ebaa6c21c6234533bfe3de10"
 dependencies = [
  "bs58",
  "proc-macro2 1.0.32",
