@@ -9,6 +9,8 @@ use std::mem::size_of;
 use std::num::NonZeroU64;
 use std::sync::{Arc, Mutex};
 use std::{thread, time};
+use rand::Rng;
+
 
 use anyhow::{format_err, Result};
 use clap::{Parser};
@@ -193,9 +195,37 @@ pub enum Command {
         #[clap(long)]
         pc_lot_size: Option<u64>,
     },
+    DumpMarket {
+        payer: String,
+        dex_program_id: Pubkey,
+        #[clap(long, short)]
+        market_id: Pubkey,
+    },
+    OrderExisting {
+        payer: String,
+        dex_program_id: Pubkey,
+        #[clap(long, short)]
+        market_id: Pubkey,
+        #[clap(long, short)]
+        coin_wallet: Pubkey,
+        #[clap(long, short)]
+        order_params: String,
+        #[clap(long, short)]
+        order_id: Option<u64>,  
+    },
     InitializeTokenAccount {
         mint: Pubkey,
         owner_account: String,
+    },
+    CancelOrder {
+        payer: String,
+        dex_program_id: Pubkey,
+        #[clap(long, short)]
+        market_id: Pubkey,
+        #[clap(long, short)]
+        open_orders: Pubkey,
+        #[clap(long, short)]
+        order_id: u64,
     },
 }
 
@@ -364,6 +394,14 @@ pub fn start(opts: Opts) -> Result<()> {
             )?;
             println!("Listed market: {:#?}", market_keys);
         }
+        Command::DumpMarket {
+            ref payer,
+            ref dex_program_id,
+            ref market_id,
+        } => {
+            let market_keys = get_keys_for_market(&client, dex_program_id, &market_id)?;
+            println!("{:?}",market_keys);
+        }
         Command::InitializeTokenAccount {
             ref mint,
             ref owner_account,
@@ -371,6 +409,39 @@ pub fn start(opts: Opts) -> Result<()> {
             let owner = read_keypair_file(owner_account)?;
             let initialized_account = initialize_token_account(&client, mint, &owner)?;
             debug_println!("Initialized account: {}", initialized_account.pubkey());
+        }
+        Command::OrderExisting {
+            ref dex_program_id,
+            ref payer,
+            ref market_id,
+            ref coin_wallet,
+            ref order_params,
+            order_id,
+        } => {
+            let payer = read_keypair_file(&payer)?;
+    
+            println!("Getting market keys ...");
+            let market_keys = get_keys_for_market(&client, dex_program_id, &market_id)?;
+            println!("payer: {:?}",payer.pubkey());
+            println!("{:#?}", market_keys);
+            println!("{}", order_params);
+            do_place_order(&client, dex_program_id, &payer, market_id, &coin_wallet, order_params.to_string(), order_id)?;
+        }
+        Command::CancelOrder {
+            ref dex_program_id,
+            ref payer,
+            ref market_id,
+            ref open_orders,
+            ref order_id,
+        } => {
+            let payer = read_keypair_file(&payer)?;
+
+            println!("Getting market keys ...");
+            let market_keys = get_keys_for_market(&client, dex_program_id, &market_id)?;
+            println!("payer: {:?}",payer.pubkey());
+            println!("{:#?}", market_keys);
+            println!("{}", order_id);
+            do_cancel_order(&client, dex_program_id, &payer, market_id, &open_orders, *order_id)?;
         }
     }
     Ok(())
@@ -820,6 +891,73 @@ pub fn consume_events_instruction(
     Ok(Some(instruction))
 }
 
+fn do_cancel_order(client: &RpcClient, dex_program_id: &Pubkey,payer: &Keypair, market:&Pubkey, orders: &Pubkey, order_id : u64 )-> Result<()> {
+    let market_keys = get_keys_for_market(&client, dex_program_id, market)?;
+
+    cancel_order_by_client_order_id(
+        client,
+        dex_program_id,
+        payer,
+        &market_keys,
+        &orders,
+        order_id,
+    )
+}
+
+fn do_place_order(client: &RpcClient, dex_program_id: &Pubkey,payer: &Keypair, market: &Pubkey, coin_wallet: &Pubkey, params: String, opt_order_id: Option<u64>) -> Result<()> {
+    let p_list : Vec<_> = params.split(':').collect();
+    let side = p_list[0];
+    let amt_str = p_list[1];
+    let limit_str = p_list[2];
+    let amt : u64 = amt_str.parse::<u64>().unwrap();
+    let limit : u64 = limit_str.parse::<u64>().unwrap();
+    let market_keys = get_keys_for_market(&client, dex_program_id, market)?;
+    let mut ord_side = Side::Bid;
+    let order_id = match opt_order_id {
+        None => {
+            let mut rng = rand::thread_rng();
+            let rando_order = rng.gen::<u64>();
+            println!("generated order: {}", rando_order);
+            rando_order
+        },
+        Some(id) => id,
+    };
+    let mut orders: Option<Pubkey> = match side.as_ref() {
+        "S"  => { 
+            ord_side = Side::Ask;
+            None 
+        },
+       "B" => { 
+            let mut new_orders: Option<Pubkey> = None;
+            init_open_orders(client, dex_program_id, payer, &market_keys, &mut new_orders)?;
+            new_orders
+        },
+        _ => {   
+             error!("invalid params : {}", params );
+             None
+        },
+    };
+    println!("order key: {}",orders.unwrap());
+    place_order(
+        client,
+        dex_program_id,
+        payer,
+        &coin_wallet,
+        &market_keys,
+        &mut orders,
+        NewOrderInstructionV3 {
+            side: ord_side,
+            limit_price: NonZeroU64::new(limit).unwrap(),
+            max_coin_qty: NonZeroU64::new(amt).unwrap(),
+            max_native_pc_qty_including_fees: NonZeroU64::new(500_000).unwrap(),
+            order_type: OrderType::Limit,
+            client_order_id: order_id,
+            self_trade_behavior: SelfTradeBehavior::DecrementTake,
+            limit: std::u16::MAX,
+        },
+    )
+}
+
 fn whole_shebang(client: &RpcClient, program_id: &Pubkey, payer: &Keypair) -> Result<()> {
     let coin_mint = Keypair::generate(&mut OsRng);
     debug_println!("Coin mint: {}", coin_mint.pubkey());
@@ -860,7 +998,7 @@ fn whole_shebang(client: &RpcClient, program_id: &Pubkey, payer: &Keypair) -> Re
     )?;
     debug_println!("Minted {}", pc_wallet.pubkey());
 
-    let mut orders = None;
+    let mut orders: Option<Pubkey> = None;
 
     debug_println!("Initializing open orders");
     init_open_orders(client, program_id, payer, &market_keys, &mut orders)?;
