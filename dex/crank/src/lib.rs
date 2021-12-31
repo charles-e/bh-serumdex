@@ -115,6 +115,16 @@ pub enum Command {
         owner_pubkey: Pubkey,
         payer: String,
     },
+    CheckEvents {
+        payer: String,
+        dex_program_id: Pubkey,
+        #[clap(long, short)]
+        market: Pubkey,
+        #[clap(long, short)]
+        coin_wallet: Pubkey,
+        #[clap(long, short)]
+        pc_wallet: Pubkey,
+    },
     ConsumeEvents {
         #[clap(long, short)]
         dex_program_id: Pubkey,
@@ -209,6 +219,8 @@ pub enum Command {
         #[clap(long, short)]
         coin_wallet: Pubkey,
         #[clap(long, short)]
+        open_orders_id: Pubkey,
+        #[clap(long, short)]
         order_params: String,
         #[clap(long, short)]
         order_id: Option<u64>,  
@@ -227,6 +239,12 @@ pub enum Command {
         #[clap(long, short)]
         order_id: u64,
     },
+    CreateOrdersAccount {
+        payer: String,
+        dex_program_id: Pubkey,
+        #[clap(long, short)]
+        market_id: Pubkey,
+    }
 }
 
 pub fn start(opts: Opts) -> Result<()> {
@@ -289,6 +307,26 @@ pub fn start(opts: Opts) -> Result<()> {
                 coin_wallet,
                 pc_wallet,
             )?;
+        }
+        Command::CheckEvents {
+            ref dex_program_id,
+            ref payer,
+            ref market,
+            ref coin_wallet,
+            ref pc_wallet,
+        } => {
+            let payer = read_keypair_file(payer)?;
+            
+            let market_keys = get_keys_for_market(&client, dex_program_id, &market)?;
+            println!("{:#?}", market_keys);
+
+            consume_events(
+                &client,
+                &dex_program_id,
+                &payer,
+                &market_keys,
+                &coin_wallet,
+                &pc_wallet)?;
         }
         Command::ConsumeEvents {
             ref dex_program_id,
@@ -415,6 +453,7 @@ pub fn start(opts: Opts) -> Result<()> {
             ref payer,
             ref market_id,
             ref coin_wallet,
+            ref open_orders_id,
             ref order_params,
             order_id,
         } => {
@@ -425,7 +464,7 @@ pub fn start(opts: Opts) -> Result<()> {
             println!("payer: {:?}",payer.pubkey());
             println!("{:#?}", market_keys);
             println!("{}", order_params);
-            do_place_order(&client, dex_program_id, &payer, market_id, &coin_wallet, order_params.to_string(), order_id)?;
+            do_place_order(&client, dex_program_id, &payer, market_id, &coin_wallet, open_orders_id, order_params.to_string(), order_id)?;
         }
         Command::CancelOrder {
             ref dex_program_id,
@@ -442,6 +481,19 @@ pub fn start(opts: Opts) -> Result<()> {
             println!("{:#?}", market_keys);
             println!("{}", order_id);
             do_cancel_order(&client, dex_program_id, &payer, market_id, &open_orders, *order_id)?;
+        }
+
+        Command::CreateOrdersAccount {
+            ref dex_program_id,
+            ref payer,
+            ref market_id,
+        } => {
+            let payer = read_keypair_file(payer)?;
+            let market_keys = get_keys_for_market(&client, dex_program_id, &market_id)?;
+
+            let mut new_orders : Option<Pubkey> = None;
+            init_open_orders(&client, dex_program_id, &payer, &market_keys, &mut new_orders)?;
+            println!("Open Orders Account: {:?} owned by {:?}",new_orders, payer.pubkey());
         }
     }
     Ok(())
@@ -825,6 +877,7 @@ fn consume_events(
     coin_wallet: &Pubkey,
     pc_wallet: &Pubkey,
 ) -> Result<()> {
+    println!("consume_events");
     let instruction = {
         let i = consume_events_instruction(client, program_id, state, coin_wallet, pc_wallet)?;
         match i {
@@ -833,14 +886,14 @@ fn consume_events(
         }
     };
     let (recent_hash, _fee_calc) = client.get_recent_blockhash()?;
-    info!("Consuming events ...");
+    println!("Consuming events ...");
     let txn = Transaction::new_signed_with_payer(
         std::slice::from_ref(&instruction),
         Some(&payer.pubkey()),
         &[payer],
         recent_hash,
     );
-    info!("Consuming events ...");
+    println!("Consuming events ...");
     send_txn(client, &txn, false)?;
     Ok(())
 }
@@ -857,10 +910,10 @@ pub fn consume_events_instruction(
     let (_header, seg0, seg1) = parse_event_queue(&inner)?;
 
     if seg0.len() + seg1.len() == 0 {
-        info!("Total event queue length: 0, returning early");
+        println!("Total event queue length: 0, returning early");
         return Ok(None);
     } else {
-        info!("Total event queue length: {}", seg0.len() + seg1.len());
+        println!("Total event queue length: {}", seg0.len() + seg1.len());
     }
     let accounts = seg0.iter().chain(seg1.iter()).map(|event| event.owner);
     let mut orders_accounts: Vec<_> = accounts.collect();
@@ -904,15 +957,23 @@ fn do_cancel_order(client: &RpcClient, dex_program_id: &Pubkey,payer: &Keypair, 
     )
 }
 
-fn do_place_order(client: &RpcClient, dex_program_id: &Pubkey,payer: &Keypair, market: &Pubkey, coin_wallet: &Pubkey, params: String, opt_order_id: Option<u64>) -> Result<()> {
+fn do_place_order(client: &RpcClient, 
+    dex_program_id: 
+    &Pubkey,payer: &Keypair, market: &Pubkey, 
+    coin_wallet: &Pubkey, 
+    orders_id : &Pubkey,
+    params: String, 
+    opt_order_id: Option<u64>) -> Result<()> {
     let p_list : Vec<_> = params.split(':').collect();
     let side = p_list[0];
     let amt_str = p_list[1];
     let limit_str = p_list[2];
     let amt : u64 = amt_str.parse::<u64>().unwrap();
     let limit : u64 = limit_str.parse::<u64>().unwrap();
+    println!("params: [type: {:?}, amount: {:?}, limit {:?}]",side,amt,limit);
     let market_keys = get_keys_for_market(&client, dex_program_id, market)?;
-    let mut ord_side = Side::Bid;
+    let mut orders = Some(*orders_id);
+
     let order_id = match opt_order_id {
         None => {
             let mut rng = rand::thread_rng();
@@ -922,22 +983,16 @@ fn do_place_order(client: &RpcClient, dex_program_id: &Pubkey,payer: &Keypair, m
         },
         Some(id) => id,
     };
-    let mut orders: Option<Pubkey> = match side.as_ref() {
-        "S"  => { 
-            ord_side = Side::Ask;
-            None 
-        },
-       "B" => { 
-            let mut new_orders: Option<Pubkey> = None;
-            init_open_orders(client, dex_program_id, payer, &market_keys, &mut new_orders)?;
-            new_orders
-        },
-        _ => {   
-             error!("invalid params : {}", params );
-             None
-        },
+
+    let ord_side  = match side.as_ref() {
+        "S"  => Side::Ask,
+        "B" =>  Side::Bid,
+        _ => {  
+            println!("either 'S' or 'B - pick a lane.");
+            std::process::exit(1);
+    },
     };
-    println!("order key: {}",orders.unwrap());
+
     place_order(
         client,
         dex_program_id,
@@ -1025,7 +1080,7 @@ fn whole_shebang(client: &RpcClient, program_id: &Pubkey, payer: &Keypair) -> Re
 
     debug_println!("Bid account: {}", orders.unwrap());
 
-    debug_println!("Placing offer...");
+    debug_println!("Placing ask...");
     let mut orders = None;
     place_order(
         client,
