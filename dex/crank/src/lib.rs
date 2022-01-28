@@ -10,7 +10,7 @@ use std::num::NonZeroU64;
 use std::sync::{Arc, Mutex};
 use std::{thread, time};
 use rand::Rng;
-
+use std::str::FromStr;
 
 use anyhow::{format_err, Result};
 use clap::{Parser};
@@ -36,6 +36,7 @@ use safecoin_sdk::signature::Signature;
 use safecoin_sdk::signature::{Keypair, Signer};
 use safecoin_sdk::transaction::Transaction;
 use safe_token::instruction as token_instruction;
+use safe_token::native_mint;
 use warp::Filter;
 
 use serum_common::client::rpc::{
@@ -197,9 +198,9 @@ pub enum Command {
         payer: String,
         dex_program_id: Pubkey,
         #[clap(long, short)]
-        coin_mint: Pubkey,
+        coin_mint: String,
         #[clap(long, short)]
-        pc_mint: Pubkey,
+        pc_mint: String,
         #[clap(long)]
         coin_lot_size: Option<u64>,
         #[clap(long)]
@@ -421,12 +422,23 @@ pub fn start(opts: Opts) -> Result<()> {
             pc_lot_size,
         } => {
             let payer = read_keypair_file(payer)?;
+
+            // the actual Safe111111111...2 key is not valid base58 
+            let pc_mint1 =  match pc_mint.as_ref() {
+                "NATIVE" => native_mint::id(),
+                _ => Pubkey::from_str(pc_mint).unwrap(),
+            };
+            let coin_mint1 =  match coin_mint.as_ref() {
+                "NATIVE" => native_mint::id(),
+                _ => Pubkey::from_str(coin_mint).unwrap(),
+            };
+        
             let market_keys = list_market(
                 &client,
                 dex_program_id,
                 &payer,
-                coin_mint,
-                pc_mint,
+                &coin_mint1,
+                &pc_mint1,
                 coin_lot_size.unwrap_or(1_000_000),
                 pc_lot_size.unwrap_or(10_000),
             )?;
@@ -464,7 +476,7 @@ pub fn start(opts: Opts) -> Result<()> {
             println!("payer: {:?}",payer.pubkey());
             println!("{:#?}", market_keys);
             println!("{}", order_params);
-            do_place_order(&client, dex_program_id, &payer, market_id, &coin_wallet, open_orders_id, order_params.to_string(), order_id)?;
+            do_place_order_prep(&client, dex_program_id, &payer, market_id, &coin_wallet, open_orders_id, order_params.to_string(), order_id)?;
         }
         Command::CancelOrder {
             ref dex_program_id,
@@ -957,13 +969,15 @@ fn do_cancel_order(client: &RpcClient, dex_program_id: &Pubkey,payer: &Keypair, 
     )
 }
 
-fn do_place_order(client: &RpcClient, 
-    dex_program_id: 
-    &Pubkey,payer: &Keypair, market: &Pubkey, 
+fn do_place_order_prep(client: &RpcClient, 
+    dex_program_id: &Pubkey,
+    payer: &Keypair,
+    market: &Pubkey, 
     coin_wallet: &Pubkey, 
     orders_id : &Pubkey,
     params: String, 
-    opt_order_id: Option<u64>) -> Result<()> {
+    opt_order_id: Option<u64>
+) -> Result<()> {
     let p_list : Vec<_> = params.split(':').collect();
     let side = p_list[0];
     let amt_str = p_list[1];
@@ -1390,13 +1404,13 @@ pub fn list_market(
         vault_signer_nonce,
     } = listing_keys;
 
-    debug_println!("Creating coin vault...");
+    println!("Creating coin vault...");
     let coin_vault = create_token_account(client, coin_mint, &vault_signer_pk, payer)?;
-    debug_println!("Created account: {} ...", coin_vault.pubkey());
+    println!("Created account: {} ...", coin_vault.pubkey());
 
-    debug_println!("Creating pc vault...");
+    println!("Creating pc vault...");
     let pc_vault = create_token_account(client, pc_mint, &listing_keys.vault_signer_pk, payer)?;
-    debug_println!("Created account: {} ...", pc_vault.pubkey());
+    println!("Created account: {} ...", pc_vault.pubkey());
 
     let init_market_instruction = serum_dex::instruction::initialize_market(
         &market_key.pubkey(),
@@ -1417,10 +1431,7 @@ pub fn list_market(
         vault_signer_nonce,
         100,
     )?;
-    debug_println!(
-        "initialize_market_instruction: {:#?}",
-        &init_market_instruction
-    );
+
 
     instructions.push(init_market_instruction);
 
@@ -1442,13 +1453,12 @@ pub fn list_market(
         recent_hash,
     );
 
-    debug_println!("txn:\n{:#x?}", txn);
-    let result = simulate_transaction(client, &txn, true, CommitmentConfig::single())?;
-    if let Some(e) = result.value.err {
-        return Err(format_err!("simulate_transaction error: {:?}", e));
-    }
-    debug_println!("{:#?}", result.value);
-    debug_println!("Listing {} ...", market_key.pubkey());
+    // let result = simulate_transaction(client, &txn, true, CommitmentConfig::single())?;
+    // if let Some(e) = result.value.err {
+    //     return Err(format_err!("simulate_transaction error: {:?}", e));
+    // }
+    // println!("{:#?}", result.value);
+    println!("Listing {} ...", market_key.pubkey());
     send_txn(client, &txn, false)?;
 
     Ok(MarketPubkeys {

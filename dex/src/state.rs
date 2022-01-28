@@ -17,7 +17,7 @@ use safe_transmute::{self, to_bytes::transmute_to_bytes, trivial::TriviallyTrans
 
 use safecoin_program::{
     account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
-    rent::Rent, sysvar::Sysvar,
+    rent::Rent, sysvar::Sysvar,msg,
 };
 use safe_token::error::TokenError;
 
@@ -161,6 +161,7 @@ impl<'a> Market<'a> {
         rent: Option<Rent>,
         open_orders_authority: Option<account_parser::SignerAccount>,
     ) -> DexResult<RefMut<'a, OpenOrders>> {
+        msg!("load_orders_mut");
         check_assert_eq!(orders_account.owner, program_id)?;
         let mut open_orders: RefMut<'a, OpenOrders>;
 
@@ -576,23 +577,23 @@ impl MarketState {
 #[derive(Copy, Clone)]
 #[cfg_attr(feature = "fuzz", derive(Debug))]
 pub struct OpenOrders {
-    pub account_flags: u64, // Initialized, OpenOrders
-    pub market: [u64; 4],
-    pub owner: [u64; 4],
+    pub account_flags: u64, // Initialized, OpenOrders 8
+    pub market: [u64; 4], // 40
+    pub owner: [u64; 4], //  72
 
-    pub native_coin_free: u64,
-    pub native_coin_total: u64,
+    pub native_coin_free: u64, // 80
+    pub native_coin_total: u64, // 88
 
-    pub native_pc_free: u64,
-    pub native_pc_total: u64,
+    pub native_pc_free: u64, // 96
+    pub native_pc_total: u64, // 104
 
-    pub free_slot_bits: u128,
-    pub is_bid_bits: u128,
-    pub orders: [u128; 128],
+    pub free_slot_bits: u128, // 120
+    pub is_bid_bits: u128, // 136
+    pub orders: [u128; 128], // 2048 + 136 = 2   2184
     // Using Option<NonZeroU64> in a pod type requires nightly
-    pub client_order_ids: [u64; 128],
-    pub referrer_rebates_accrued: u64,
-}
+    pub client_order_ids: [u64; 128], // 1024 + 2184 = 3208
+    pub referrer_rebates_accrued: u64, // 3216 
+} // + 12 pad bytes = 3228
 unsafe impl Pod for OpenOrders {}
 unsafe impl Zeroable for OpenOrders {}
 
@@ -609,6 +610,7 @@ impl OpenOrders {
 
     fn init(&mut self, market: &[u64; 4], owner: &[u64; 4]) -> DexResult<()> {
         check_assert_eq!(self.account_flags, 0)?;
+        msg!("init open orders");
         self.account_flags = (AccountFlag::Initialized | AccountFlag::OpenOrders).bits();
         self.market = *market;
         self.owner = *owner;
@@ -1856,7 +1858,7 @@ pub(crate) mod account_parser {
             };
 
             let mut market = Market::load(market_acc, program_id, false)?;
-
+            msg!("got market");
             // Dynamic sysvars don't work in unit tests.
             #[cfg(any(test, feature = "fuzz"))]
             let rent = Rent::from_account_info(rent_sysvar_acc)?;
@@ -1871,10 +1873,12 @@ pub(crate) mod account_parser {
             let event_q = market.load_event_queue_mut(event_q_acc)?;
 
             let payer = TokenAccount::new(payer_acc)?;
+            msg!("payer {:?} side {:?}",&payer_acc, &instruction.side);
             match instruction.side {
                 Side::Bid => market.check_pc_payer(payer).or(check_unreachable!())?,
                 Side::Ask => market.check_coin_payer(payer).or(check_unreachable!())?,
             };
+            msg!("checked payer");
             let coin_vault = CoinVault::from_account(coin_vault_acc, &market)?;
             let pc_vault = PcVault::from_account(pc_vault_acc, &market)?;
             market.check_enabled()?;
@@ -1882,6 +1886,7 @@ pub(crate) mod account_parser {
 
             let mut bids = market.load_bids_mut(bids_acc).or(check_unreachable!())?;
             let mut asks = market.load_asks_mut(asks_acc).or(check_unreachable!())?;
+            msg!("loaded bids and asks");
 
             let open_orders = market.load_orders_mut(
                 open_orders_acc,
@@ -1896,7 +1901,7 @@ pub(crate) mod account_parser {
                 asks: asks.deref_mut(),
                 market_state: market.deref_mut(),
             };
-
+            msg!("setting up args owner {:?}", owner.0);
             let args = NewOrderV3Args {
                 instruction,
                 order_book_state,
@@ -1911,6 +1916,7 @@ pub(crate) mod account_parser {
                 safe_token_program,
                 fee_tier,
             };
+            msg!("calling process {:?}",payer.0);
             f(args)
         }
     }
@@ -2760,7 +2766,7 @@ impl State {
             market,
             mut event_q,
         } = args;
-
+        msg!("process_consume_events");
         for _i in 0u16..limit {
             let event = match event_q.peek_front() {
                 None => break,
@@ -2892,6 +2898,7 @@ impl State {
             safe_token_program,
             fee_tier,
         } = args;
+        msg!("process_new_order_v3");
 
         let open_orders_mut = open_orders.deref_mut();
 
@@ -2901,12 +2908,16 @@ impl State {
         let deposit_vault;
 
         let native_pc_qty_locked;
+        
         match instruction.side {
             Side::Bid => {
+                msg!("bid");
+
                 let lock_qty_native = instruction.max_native_pc_qty_including_fees;
                 native_pc_qty_locked = Some(lock_qty_native);
                 let free_qty_to_lock = lock_qty_native.get().min(open_orders_mut.native_pc_free);
                 deposit_amount = lock_qty_native.get() - free_qty_to_lock;
+                msg!("deposit amt {}",deposit_amount);
                 deposit_vault = pc_vault.token_account();
                 if payer.balance()? < deposit_amount {
                     return Err(DexErrorCode::InsufficientFunds.into());
@@ -2920,6 +2931,7 @@ impl State {
                     .unwrap();
             }
             Side::Ask => {
+                msg!("ask");
                 native_pc_qty_locked = None;
                 let lock_qty_native = instruction
                     .max_coin_qty
@@ -2929,19 +2941,27 @@ impl State {
                 let free_qty_to_lock = lock_qty_native.min(open_orders_mut.native_coin_free);
                 deposit_amount = lock_qty_native - free_qty_to_lock;
                 deposit_vault = coin_vault.token_account();
+                msg!("deposit vault locking {:?}",deposit_amount);
                 if payer.balance()? < deposit_amount {
+                    msg!("error insufficient");
                     return Err(DexErrorCode::InsufficientFunds.into());
                 }
+                msg!("one");
+
                 open_orders_mut.lock_free_coin(free_qty_to_lock);
+                msg!("two");
+
                 open_orders_mut.credit_locked_coin(deposit_amount);
+                msg!("three");
+
                 order_book_state.market_state.coin_deposits_total = order_book_state
                     .market_state
                     .coin_deposits_total
                     .checked_add(deposit_amount)
                     .unwrap();
+                msg!("done ask");
             }
         };
-
         let order_id = req_q.gen_order_id(instruction.limit_price.get(), instruction.side);
         let owner_slot = open_orders_mut.add_order(order_id, instruction.side)?;
         open_orders_mut.client_order_ids[owner_slot as usize] = instruction.client_order_id;
@@ -2961,6 +2981,7 @@ impl State {
             client_order_id: NonZeroU64::new(instruction.client_order_id),
         };
         let mut limit = instruction.limit;
+        msg!("calling orderbook");
         let unfilled_portion = order_book_state.process_orderbook_request(
             &request,
             &mut event_q,
@@ -3017,6 +3038,7 @@ impl State {
         drop(open_orders);
 
         if deposit_amount != 0 {
+            msg!("depositing : {}",deposit_amount);
             let balance_before = deposit_vault.balance()?;
             let deposit_instruction = safe_token::instruction::transfer(
                 &safe_token::ID,

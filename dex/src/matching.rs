@@ -252,9 +252,11 @@ impl<'ob> OrderBookState<'ob> {
             OrderType::PostOnly => (true, true),
         };
         let limit_price = extract_price_from_order_id(order_id);
+        msg!("looping {} times",&limit);
         loop {
             if *limit == 0 {
                 // Stop matching and release funds if we're out of cycles
+                msg!("giving up match");
                 post_only = true;
                 post_allowed = true;
             }
@@ -298,15 +300,20 @@ impl<'ob> OrderBookState<'ob> {
                 }
             }?;
             if *limit == 0 {
+                msg!("returning order done");
                 return Ok(remaining_order);
             }
             *limit -= 1;
             match remaining_order {
                 Some(remaining_order) => {
+                    msg!("keep going {} remaining",remaining_order.coin_qty_remaining);
                     max_coin_qty = remaining_order.coin_qty_remaining;
                     native_pc_qty_locked = remaining_order.native_pc_qty_remaining;
                 }
-                None => return Ok(None),
+                None => {
+                    msg!("done no leftovers");
+                    return Ok(None)
+                },
             };
         }
     }
