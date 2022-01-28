@@ -21,12 +21,12 @@ use proptest_derive::Arbitrary;
 
 pub mod srm_token {
     use safecoin_program::declare_id;
-    declare_id!("SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt");
+    declare_id!("SwAPhfpwC4GCP2CrPEotCs7UckZiLFqYFmtYUjnBkNo");
 }
 
 pub mod msrm_token {
     use safecoin_program::declare_id;
-    declare_id!("MSRMcoVyrFxnSgo5uXwone5SKcGhT1KEJMFEkMEWf9L");
+    declare_id!("suprgLjUnosxP6Y2g48uXn3Jd1cyRmscKaRooap9Wq7");
 }
 
 pub mod disable_authority {
