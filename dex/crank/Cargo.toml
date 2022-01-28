@@ -37,10 +37,10 @@ warp = "0.2"
   [dependencies.safe-token]
   features = [ "no-entrypoint" ]
   default-features = false
-version = "3.2.0"
+version = "3.2.2"
 
   [dependencies.safecoin-client]
-version = "1.7.17"
+version = "1.8.12"
 
   [dependencies.safecoin-sdk]
-version = "1.7.17"
+version = "1.8.12"

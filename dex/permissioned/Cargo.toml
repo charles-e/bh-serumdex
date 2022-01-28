@@ -12,4 +12,4 @@ anchor-spl = { path = "../../../bh-anchor18/spl" ,features=["dex"] }
 
   [dependencies.safe-token]
   features = [ "no-entrypoint" ]
-version = "3.2.0"
+version = "3.2.2"
